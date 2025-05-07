@@ -19,6 +19,7 @@ import { Client, User, RecentActivity as Interaction } from "@/types";
 import { ArrowLeft, Edit3, PlusCircle, Archive, Mail, PhoneIcon, Briefcase, Info, Tag, CalendarDays, MessageSquare } from 'lucide-react';
 import AddInteractionModal from "@/components/clients/AddInteractionModal";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import EditClientModal from "@/components/clients/EditClientModal";
 import { useToast } from "@/hooks/use-toast";
 
 // It's better to move mock data to a shared file, e.g., lib/mockData.ts
@@ -89,6 +90,7 @@ export default function ClientDetailsPage() {
   const [isAddInteractionModalOpen, setIsAddInteractionModalOpen] = useState(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (clientId) {
@@ -144,6 +146,12 @@ export default function ClientDetailsPage() {
     }
   };
 
+  const handleClientUpdated = (updatedClient: Client) => {
+    setClient(updatedClient);
+    // Potentially, you might want to refresh the whole client list if some global property changed
+    // or update the specific client in the mockClients array if we were managing a global mock store.
+  };
+
   if (loading) {
     return <AppLayout><div className="flex justify-center items-center h-full"><p>Loading client details...</p></div></AppLayout>;
   }
@@ -184,7 +192,9 @@ export default function ClientDetailsPage() {
             <p className="text-muted-foreground">{client.company}</p>
           </div>
           <div className="flex space-x-2 mt-2 sm:mt-0">
-            <Button variant="outline"><Edit3 className="mr-2 h-4 w-4" /> Edit Client</Button>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(true)}>
+                <Edit3 className="mr-2 h-4 w-4" /> Edit Client
+            </Button>
             <Button onClick={() => setIsAddInteractionModalOpen(true)}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Interaction
             </Button>
@@ -279,6 +289,12 @@ export default function ClientDetailsPage() {
         }
         confirmButtonText="Yes, Archive Client"
         isConfirming={isArchiving}
+      />
+      <EditClientModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        client={client}
+        onClientUpdated={handleClientUpdated}
       />
     </AppLayout>
   );
