@@ -81,7 +81,7 @@ const mockCampaigns: Campaign[] = [
     startDate: `2023-0${i % 2 + 1}-01`,
     endDate: `2023-0${i % 2 + 2}-28`,
     budget: 3000 + (i*500),
-    status: 'Completed',
+    status: 'Completed' as 'Completed',
     description: `Completed campaign from last year ${i+1}`
   }))
 ];

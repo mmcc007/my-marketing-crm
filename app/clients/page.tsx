@@ -79,7 +79,7 @@ const mockClients: Client[] = [
     clientName: `Mock Client ${i + 5}`,
     email: `mock${i + 5}@example.com`,
     company: `Mock Company ${i + 5}`,
-    status: i % 3 === 0 ? 'Active' : i % 3 === 1 ? 'Lead' : 'Inactive',
+    status: (i % 3 === 0 ? 'Active' : i % 3 === 1 ? 'Lead' : 'Inactive') as 'Active' | 'Lead' | 'Inactive',
     lastInteraction: `2024-04-${10 + i}`,
     assignedManager: mockUsers[i % 3],
   }))
