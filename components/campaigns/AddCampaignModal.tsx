@@ -112,6 +112,11 @@ export default function AddCampaignModal({
       const selectedClient = clients.find(c => c.id === formData.clientId);
       if (!selectedClient) throw new Error("Selected client not found");
 
+      // Ensure status is a valid value (can't be empty string)
+      if (!formData.status) {
+        throw new Error("Status cannot be empty");
+      }
+
       const submissionData = {
         ...formData,
         budget: parseFloat(formData.budget),
@@ -126,6 +131,7 @@ export default function AddCampaignModal({
         id: `camp${Date.now()}`,
         ...submissionData,
         client: selectedClient,
+        status: formData.status as Campaign['status'], // Explicit cast to ensure type safety
       };
       
       onCampaignAdded(newCampaign);
@@ -224,7 +230,13 @@ export default function AddCampaignModal({
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={formData.endDate} onSelect={(date) => handleDateChange('endDate', date)} disabled={{ before: formData.startDate }} initialFocus />
+                            <Calendar 
+                                mode="single" 
+                                selected={formData.endDate} 
+                                onSelect={(date) => handleDateChange('endDate', date)} 
+                                disabled={formData.startDate ? { before: formData.startDate } : undefined} 
+                                initialFocus 
+                            />
                         </PopoverContent>
                     </Popover>
                     {errors.endDate && <p className="text-xs text-red-500">{errors.endDate}</p>}

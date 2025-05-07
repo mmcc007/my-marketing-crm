@@ -119,6 +119,10 @@ export default function EditCampaignModal({
       const selectedClient = clients.find(c => c.id === formData.clientId);
       if (!selectedClient) throw new Error("Selected client not found for update");
 
+      if (!formData.status) {
+        throw new Error("Status cannot be empty");
+      }
+
       const submissionData = {
         ...formData,
         budget: parseFloat(formData.budget),
@@ -133,6 +137,7 @@ export default function EditCampaignModal({
         ...campaign, // Spread existing campaign to keep ID etc.
         ...submissionData,
         client: selectedClient,
+        status: formData.status as Campaign['status'],
       };
       
       onCampaignUpdated(updatedCampaign);
@@ -230,7 +235,13 @@ export default function EditCampaignModal({
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={formData.endDate} onSelect={(date) => handleDateChange('endDate', date)} disabled={{ before: formData.startDate }} initialFocus />
+                            <Calendar 
+                                mode="single" 
+                                selected={formData.endDate} 
+                                onSelect={(date) => handleDateChange('endDate', date)} 
+                                disabled={formData.startDate ? { before: formData.startDate } : undefined} 
+                                initialFocus 
+                            />
                         </PopoverContent>
                     </Popover>
                     {errors.endDate && <p className="text-xs text-red-500">{errors.endDate}</p>}

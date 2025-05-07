@@ -125,8 +125,7 @@ export default function EditClientModal({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!client || !validate()) {
-        if(!client) toast({title: "Error", description:"Client data missing.", variant: "destructive"});
-        else toast({title: "Validation Error", description:"Please check form fields.", variant: "destructive"});
+      toast({title: "Error", description: "Please check all required fields."});
       return;
     }
     setIsSubmitting(true);
@@ -139,12 +138,19 @@ export default function EditClientModal({
       // if (!response.ok) throw new Error("Failed to update client");
       // const updatedClientData = await response.json();
       
+      // Ensure status is a valid value (can't be empty string)
+      if (!formData.status) {
+        throw new Error("Status cannot be empty");
+      }
+      
       console.log("Updating client:", client.id, formData);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
 
       const updatedClient: Client = {
         ...client, // Spread existing client to keep ID and other uneditable fields
         ...formData, // Spread form data
+        // Ensure status has a valid type
+        status: formData.status as Client['status'],
         // Ensure assignedManager is correctly structured if only ID is in formData
         assignedManager: managers.find(m => m.id === formData.assignedManagerId) || null,
       };
