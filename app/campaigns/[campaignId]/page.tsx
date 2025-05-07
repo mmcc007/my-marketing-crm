@@ -11,6 +11,7 @@ import { ArrowLeft, Edit3, Archive, Users, CalendarDays, DollarSign, ClipboardLi
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import EditCampaignModal from "@/components/campaigns/EditCampaignModal";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock Data - Ideally, centralize this
@@ -53,6 +54,8 @@ export default function CampaignDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,6 +77,35 @@ export default function CampaignDetailsPage() {
 
   const handleCampaignUpdated = (updatedCampaign: Campaign) => {
     setCampaign(updatedCampaign);
+  };
+
+  const handleArchiveCampaign = async () => {
+    if (!campaign) return;
+    setIsArchiving(true);
+    try {
+      console.log(`Archiving campaign ${campaign.id}...`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+
+      // Mock behavior: Update local campaign state
+      setCampaign(prevCampaign => prevCampaign ? { ...prevCampaign, status: 'Paused' } : null);
+      // In a real app, you might also want to update the list on the main /campaigns page
+      // by calling a callback passed from there or using global state.
+      
+      toast({
+        title: "Campaign Archived",
+        description: `${campaign.campaignName} has been archived (status set to Paused).`,
+      });
+      setIsArchiveConfirmOpen(false);
+    } catch (error) {
+      console.error("Failed to archive campaign:", error);
+      toast({
+        title: "Error Archiving Campaign",
+        description: (error as Error).message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsArchiving(false);
+    }
   };
 
   if (loading) {
@@ -126,7 +158,10 @@ export default function CampaignDetailsPage() {
           </div>
           <div className="flex space-x-2 mt-2 sm:mt-0">
             <Button variant="outline" onClick={() => setIsEditModalOpen(true)}><Edit3 className="mr-2 h-4 w-4" /> Edit Campaign</Button>
-            <Button variant="destructive" onClick={() => alert('Archive Campaign confirmation to be implemented')}><Archive className="mr-2 h-4 w-4" /> Archive</Button>
+            <Button variant="destructive" onClick={() => setIsArchiveConfirmOpen(true)} disabled={campaign?.status === 'Paused' || campaign?.status === 'Completed'}>
+                <Archive className="mr-2 h-4 w-4" /> 
+                {campaign?.status === 'Paused' ? 'Archived (Paused)' : campaign?.status === 'Completed' ? 'Archived (Completed)' : 'Archive'}
+            </Button>
           </div>
         </div>
 
@@ -165,6 +200,17 @@ export default function CampaignDetailsPage() {
         campaign={campaign}
         clients={clients}
         onCampaignUpdated={handleCampaignUpdated}
+      />
+      <ConfirmationDialog
+        isOpen={isArchiveConfirmOpen}
+        onClose={() => setIsArchiveConfirmOpen(false)}
+        onConfirm={handleArchiveCampaign}
+        title="Archive Campaign?"
+        description={
+          <p>Are you sure you want to archive the campaign <strong>{campaign?.campaignName}</strong>? This will typically set its status to Paused or prevent further active changes.</p>
+        }
+        confirmButtonText="Yes, Archive Campaign"
+        isConfirming={isArchiving}
       />
     </AppLayout>
   );
