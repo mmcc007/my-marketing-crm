@@ -33,10 +33,14 @@ export interface Campaign {
 export interface Task {
   id: string;
   title: string;
+  description?: string;
   dueDate: string; // Should be a Date
   assignedTo?: User | null; // Or string for user ID
   relatedClient?: Client | null; // Or string for client ID
   relatedCampaign?: Campaign | null; // Or string for campaign ID
+  priority?: "low" | "medium" | "high";
+  isCompleted: boolean;
+  createdAt: string; // Should be a Date
 }
 
 export interface RecentActivity {

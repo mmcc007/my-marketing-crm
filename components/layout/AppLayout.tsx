@@ -34,6 +34,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <Link href="/campaigns" className="font-medium text-muted-foreground transition-colors hover:text-primary-foreground">
             Campaigns
           </Link>
+          <Link href="/tasks" className="font-medium text-muted-foreground transition-colors hover:text-primary-foreground">
+            Tasks
+          </Link>
           {userRole === "Admin" && (
             <Link href="/admin" className="font-medium text-muted-foreground transition-colors hover:text-primary-foreground">
               Admin

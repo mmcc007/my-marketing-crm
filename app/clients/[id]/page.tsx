@@ -15,11 +15,13 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { Client, User, RecentActivity as Interaction } from "@/types";
+import { Client, User, RecentActivity as Interaction, Task } from "@/types";
 import { ArrowLeft, Edit3, PlusCircle, Archive, Mail, PhoneIcon, Briefcase, Info, Tag, CalendarDays, MessageSquare } from 'lucide-react';
 import AddInteractionModal from "@/components/clients/AddInteractionModal";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import EditClientModal from "@/components/clients/EditClientModal";
+import TaskList from "@/components/tasks/TaskList";
+import TaskModal from "@/components/tasks/TaskModal";
 import { useToast } from "@/hooks/use-toast";
 
 // It's better to move mock data to a shared file, e.g., lib/mockData.ts
@@ -77,6 +79,46 @@ const mockInteractions: Interaction[] = [
     { id: 'int4', client: mockClients[0], date: '2024-04-20', type: 'Note', notes: 'Client mentioned budget constraints for Q2.'}
 ];
 
+// Mock data for tasks
+const mockTasks: Task[] = [
+  {
+    id: 'task1',
+    title: 'Follow up with Innovatech about Q3 budget',
+    description: 'Schedule a call to discuss budget for the upcoming campaign',
+    dueDate: '2024-05-25',
+    assignedTo: mockUsers[0],
+    relatedClient: mockClients[0],
+    relatedCampaign: null,
+    priority: 'high',
+    isCompleted: false,
+    createdAt: '2024-05-10',
+  },
+  {
+    id: 'task2',
+    title: 'Draft proposal for Innovatech summer campaign',
+    description: 'Create a proposal based on their requests from last meeting',
+    dueDate: '2024-05-28',
+    assignedTo: mockUsers[1],
+    relatedClient: mockClients[0],
+    relatedCampaign: null,
+    priority: 'medium',
+    isCompleted: false,
+    createdAt: '2024-05-12',
+  },
+  {
+    id: 'task3',
+    title: 'Create proposal for Quantum Leap',
+    description: 'Draft a proposal for the summer marketing campaign',
+    dueDate: '2024-05-20',
+    assignedTo: mockUsers[1],
+    relatedClient: mockClients[1],
+    relatedCampaign: null,
+    priority: 'medium',
+    isCompleted: true,
+    createdAt: '2024-05-08',
+  },
+];
+
 export default function ClientDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -85,12 +127,16 @@ export default function ClientDetailsPage() {
 
   const [client, setClient] = useState<Client | null>(null);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddInteractionModalOpen, setIsAddInteractionModalOpen] = useState(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   useEffect(() => {
     if (clientId) {
@@ -102,6 +148,13 @@ export default function ClientDetailsPage() {
           setClient(foundClient);
           const clientInteractions = mockInteractions.filter(int => int.client.id === clientId);
           setInteractions(clientInteractions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          
+          // Load client-related tasks
+          const clientTasks = mockTasks.filter(task => task.relatedClient?.id === clientId);
+          setTasks(clientTasks);
+          
+          // In a real app, you would fetch the campaigns for this client here
+          setCampaigns([]);
         } else {
           setError("Client not found.");
         }
@@ -150,6 +203,43 @@ export default function ClientDetailsPage() {
     setClient(updatedClient);
     // Potentially, you might want to refresh the whole client list if some global property changed
     // or update the specific client in the mockClients array if we were managing a global mock store.
+  };
+
+  const handleAddTask = () => {
+    setEditingTask(null);
+    setIsTaskModalOpen(true);
+  };
+  
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsTaskModalOpen(true);
+  };
+  
+  const handleCompleteTask = (task: Task) => {
+    const updatedTask = {
+      ...task,
+      isCompleted: !task.isCompleted
+    };
+    
+    // Update task in the "database"
+    setTasks(prev => prev.map(t => t.id === task.id ? updatedTask : t));
+    
+    toast({
+      title: updatedTask.isCompleted ? "Task Completed" : "Task Reopened",
+      description: updatedTask.isCompleted 
+        ? `"${task.title}" has been marked as completed.`
+        : `"${task.title}" has been reopened.`,
+    });
+  };
+  
+  const handleSaveTask = (task: Task) => {
+    if (editingTask) {
+      // Update existing task
+      setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+    } else {
+      // Add new task
+      setTasks(prev => [...prev, task]);
+    }
   };
 
   if (loading) {
@@ -241,6 +331,26 @@ export default function ClientDetailsPage() {
           </CardContent>
         </Card>
 
+        {/* Tasks Card */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Tasks</h2>
+            <Button onClick={handleAddTask}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Task
+            </Button>
+          </div>
+          
+          <TaskList 
+            tasks={tasks}
+            users={mockUsers}
+            campaigns={campaigns}
+            relatedToClient={clientId}
+            onAddTask={handleAddTask}
+            onEditTask={handleEditTask}
+            onCompleteTask={handleCompleteTask}
+          />
+        </div>
+
         {/* Interaction History Card */}
         <Card>
           <CardHeader>
@@ -254,47 +364,69 @@ export default function ClientDetailsPage() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead className="w-[60%]">Notes</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {interactions.map(interaction => (
                     <TableRow key={interaction.id}>
                       <TableCell>{new Date(interaction.date).toLocaleDateString()}</TableCell>
-                      <TableCell><Badge variant="outline">{interaction.type}</Badge></TableCell>
-                      <TableCell className="whitespace-pre-wrap">{interaction.notes}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{interaction.type}</Badge>
+                      </TableCell>
+                      <TableCell>{interaction.notes}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
-              <p>No interactions recorded for this client yet.</p>
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No interaction history yet.</p>
+                <Button onClick={() => setIsAddInteractionModalOpen(true)} variant="outline" className="mt-4">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add First Interaction
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Modals */}
       <AddInteractionModal 
         isOpen={isAddInteractionModalOpen}
         onClose={() => setIsAddInteractionModalOpen(false)}
         client={client}
         onInteractionAdded={handleInteractionAdded}
       />
+      
+      <EditClientModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        client={client}
+        onClientUpdated={handleClientUpdated}
+      />
+      
       <ConfirmationDialog
         isOpen={isArchiveConfirmOpen}
         onClose={() => setIsArchiveConfirmOpen(false)}
         onConfirm={handleArchiveClient}
         title="Archive Client?"
         description={
-          <p>Are you sure you want to archive <strong>{client?.clientName}</strong>? This will set their status to Inactive. This action can usually be undone via client settings or by an admin.</p>
+          <p>Are you sure you want to archive <strong>{client.clientName}</strong>? This will set their status to Inactive.</p>
         }
         confirmButtonText="Yes, Archive Client"
         isConfirming={isArchiving}
       />
-      <EditClientModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        client={client}
-        onClientUpdated={handleClientUpdated}
+      
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        task={editingTask}
+        onSave={handleSaveTask}
+        users={mockUsers}
+        clients={mockClients}
+        campaigns={campaigns}
+        defaultClientId={clientId}
       />
     </AppLayout>
   );

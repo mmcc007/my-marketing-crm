@@ -6,15 +6,23 @@ import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Campaign, Client } from "@/types"; // Assuming User might be needed if we add more details
-import { ArrowLeft, Edit3, Archive, Users, CalendarDays, DollarSign, ClipboardList, FileText } from 'lucide-react';
+import { Campaign, Client, Task, User } from "@/types"; // Added Task and User for task management
+import { ArrowLeft, Edit3, Archive, Users, CalendarDays, DollarSign, ClipboardList, FileText, PlusCircle } from 'lucide-react';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import EditCampaignModal from "@/components/campaigns/EditCampaignModal";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import TaskList from "@/components/tasks/TaskList";
+import TaskModal from "@/components/tasks/TaskModal";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock Data - Ideally, centralize this
+const mockUsers: User[] = [
+  { id: 'user1', name: 'Alice Wonderland', email: 'alice@example.com', role: 'Admin', status: 'Active' },
+  { id: 'user2', name: 'Bob The Builder', email: 'bob@example.com', role: 'Manager', status: 'Active' },
+  { id: 'user3', name: 'Charlie Brown', email: 'charlie@example.com', role: 'Manager', status: 'Active' },
+];
+
 const mockClients: Client[] = [
   { id: 'client1', clientName: 'Innovatech Solutions', email: 'c1@example.com', company: 'IS Ltd', status: 'Active', lastInteraction: '2023-01-01', assignedManager: null },
   { id: 'client2', clientName: 'Quantum Leap Inc.', email: 'c2@example.com', company: 'QL Inc', status: 'Active', lastInteraction: '2023-01-01', assignedManager: null },
@@ -44,6 +52,46 @@ const mockCampaigns: Campaign[] = [
   // Add more campaigns if needed for direct navigation testing
 ];
 
+// Mock data for tasks
+const mockTasks: Task[] = [
+  {
+    id: 'task1',
+    title: 'Review Q1 Product Launch analytics',
+    description: 'Analyze performance metrics and prepare report for client meeting',
+    dueDate: '2024-03-20',
+    assignedTo: mockUsers[0],
+    relatedClient: mockClients[0],
+    relatedCampaign: mockCampaigns[0],
+    priority: 'high',
+    isCompleted: true,
+    createdAt: '2024-03-16',
+  },
+  {
+    id: 'task2',
+    title: 'Prepare client presentation for Q1 results',
+    description: 'Create slides showing campaign performance',
+    dueDate: '2024-03-25',
+    assignedTo: mockUsers[1],
+    relatedClient: mockClients[0],
+    relatedCampaign: mockCampaigns[0],
+    priority: 'medium',
+    isCompleted: false,
+    createdAt: '2024-03-18',
+  },
+  {
+    id: 'task3',
+    title: 'Schedule content creation for Spring campaign',
+    description: 'Coordinate with design team for promotional materials',
+    dueDate: '2024-04-15',
+    assignedTo: mockUsers[2],
+    relatedClient: mockClients[1],
+    relatedCampaign: mockCampaigns[1],
+    priority: 'high',
+    isCompleted: false,
+    createdAt: '2024-04-02',
+  },
+];
+
 export default function CampaignDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -51,11 +99,14 @@ export default function CampaignDetailsPage() {
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,6 +117,10 @@ export default function CampaignDetailsPage() {
         const foundCampaign = mockCampaigns.find(c => c.id === campaignId);
         if (foundCampaign) {
           setCampaign(foundCampaign);
+          
+          // Load campaign-related tasks
+          const campaignTasks = mockTasks.filter(task => task.relatedCampaign?.id === campaignId);
+          setTasks(campaignTasks);
         } else {
           setError("Campaign not found.");
         }
@@ -105,6 +160,43 @@ export default function CampaignDetailsPage() {
       });
     } finally {
       setIsArchiving(false);
+    }
+  };
+  
+  const handleAddTask = () => {
+    setEditingTask(null);
+    setIsTaskModalOpen(true);
+  };
+  
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task);
+    setIsTaskModalOpen(true);
+  };
+  
+  const handleCompleteTask = (task: Task) => {
+    const updatedTask = {
+      ...task,
+      isCompleted: !task.isCompleted
+    };
+    
+    // Update task in the "database"
+    setTasks(prev => prev.map(t => t.id === task.id ? updatedTask : t));
+    
+    toast({
+      title: updatedTask.isCompleted ? "Task Completed" : "Task Reopened",
+      description: updatedTask.isCompleted 
+        ? `"${task.title}" has been marked as completed.`
+        : `"${task.title}" has been reopened.`,
+    });
+  };
+  
+  const handleSaveTask = (task: Task) => {
+    if (editingTask) {
+      // Update existing task
+      setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+    } else {
+      // Add new task
+      setTasks(prev => [...prev, task]);
     }
   };
 
@@ -182,18 +274,29 @@ export default function CampaignDetailsPage() {
           </CardContent>
         </Card>
 
-        {/* Placeholder for other sections like Tasks or KPIs */}
-        {/* 
-        <Card>
-          <CardHeader><CardTitle>Key Performance Indicators</CardTitle></CardHeader>
-          <CardContent><p>KPI data will be shown here...</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Associated Tasks</CardTitle></CardHeader>
-          <CardContent><p>Tasks related to this campaign will be listed here...</p></CardContent>
-        </Card>
-        */}
+        {/* Tasks Card */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Campaign Tasks</h2>
+            <Button onClick={handleAddTask}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Task
+            </Button>
+          </div>
+          
+          <TaskList 
+            tasks={tasks}
+            users={mockUsers}
+            clients={mockClients}
+            campaigns={mockCampaigns}
+            relatedToCampaign={campaignId}
+            onAddTask={handleAddTask}
+            onEditTask={handleEditTask}
+            onCompleteTask={handleCompleteTask}
+          />
+        </div>
       </div>
+      
+      {/* Modals */}
       <EditCampaignModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
@@ -201,6 +304,7 @@ export default function CampaignDetailsPage() {
         clients={clients}
         onCampaignUpdated={handleCampaignUpdated}
       />
+      
       <ConfirmationDialog
         isOpen={isArchiveConfirmOpen}
         onClose={() => setIsArchiveConfirmOpen(false)}
@@ -211,6 +315,17 @@ export default function CampaignDetailsPage() {
         }
         confirmButtonText="Yes, Archive Campaign"
         isConfirming={isArchiving}
+      />
+      
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        task={editingTask}
+        onSave={handleSaveTask}
+        users={mockUsers}
+        clients={mockClients}
+        campaigns={mockCampaigns}
+        defaultCampaignId={campaignId}
       />
     </AppLayout>
   );
