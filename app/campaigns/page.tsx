@@ -34,6 +34,7 @@ import { Badge } from "@/components/ui/badge";
 import { Campaign, Client } from "@/types";
 import { MoreHorizontal, PlusCircle, CalendarIcon, ArrowUpDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import AddCampaignModal from "@/components/campaigns/AddCampaignModal";
 
 // Mock Data (Ideally, share this with other pages, e.g., from lib/mockData.ts)
 const mockClients: Client[] = [
@@ -89,6 +90,7 @@ const ITEMS_PER_PAGE = 10;
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,11 +106,14 @@ export default function CampaignsPage() {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
   useEffect(() => {
     setLoading(true);
     setError(null);
     setTimeout(() => {
       setCampaigns(mockCampaigns);
+      setClients(mockClients);
       setLoading(false);
     }, 500);
   }, []);
@@ -176,6 +181,12 @@ export default function CampaignsPage() {
 
   const totalPages = Math.ceil(filteredCampaigns.length / ITEMS_PER_PAGE);
 
+  const handleCampaignAdded = (newCampaign: Campaign) => {
+    setCampaigns(prevCampaigns => 
+        [newCampaign, ...prevCampaigns].sort((a,b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+    );
+  };
+
   if (loading) return <AppLayout><p>Loading campaigns...</p></AppLayout>;
   if (error) return <AppLayout><p className="text-red-500">Error: {error}</p></AppLayout>;
 
@@ -193,13 +204,11 @@ export default function CampaignsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <h1 className="text-3xl font-bold">Campaigns</h1>
-          {/* TODO: Link to Add Campaign Modal trigger */}
-          <Button onClick={() => alert('Add Campaign Modal to be implemented')}>
+          <Button onClick={() => setIsAddModalOpen(true)}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Campaign
           </Button>
         </div>
 
-        {/* Filters Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 border rounded-lg">
           <div>
             <label htmlFor="clientFilter" className="block text-sm font-medium text-gray-700 mb-1">Client</label>
@@ -207,7 +216,7 @@ export default function CampaignsPage() {
               <SelectTrigger id="clientFilter"><SelectValue placeholder="Filter by client" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clients</SelectItem>
-                {mockClients.map(client => <SelectItem key={client.id} value={client.id}>{client.clientName}</SelectItem>)}
+                {clients.map(client => <SelectItem key={client.id} value={client.id}>{client.clientName}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -293,7 +302,6 @@ export default function CampaignsPage() {
                           <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {/* TODO: Link to Campaign Details Page */}
                           <DropdownMenuItem onClick={() => alert(`View details for ${campaign.campaignName}`)}>View Details</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -315,6 +323,12 @@ export default function CampaignsPage() {
           </div>
         )}
       </div>
+      <AddCampaignModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onCampaignAdded={handleCampaignAdded}
+        clients={clients}
+      />
     </AppLayout>
   );
 } 
