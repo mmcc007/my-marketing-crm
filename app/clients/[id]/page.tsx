@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/table";
 import { Client, User, RecentActivity as Interaction } from "@/types";
 import { ArrowLeft, Edit3, PlusCircle, Archive, Mail, PhoneIcon, Briefcase, Info, Tag, CalendarDays, MessageSquare } from 'lucide-react';
+import AddInteractionModal from "@/components/clients/AddInteractionModal";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { useToast } from "@/hooks/use-toast";
 
 // It's better to move mock data to a shared file, e.g., lib/mockData.ts
 // For now, duplicating for simplicity, but this should be centralized.
@@ -77,23 +80,26 @@ export default function ClientDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const clientId = params.id as string;
+  const { toast } = useToast();
 
   const [client, setClient] = useState<Client | null>(null);
   const [interactions, setInteractions] = useState<Interaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAddInteractionModalOpen, setIsAddInteractionModalOpen] = useState(false);
+  const [isArchiveConfirmOpen, setIsArchiveConfirmOpen] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   useEffect(() => {
     if (clientId) {
       setLoading(true);
       setError(null);
-      // Simulate API call to fetch client by ID and their interactions
       setTimeout(() => {
         const foundClient = mockClients.find(c => c.id === clientId);
         if (foundClient) {
           setClient(foundClient);
           const clientInteractions = mockInteractions.filter(int => int.client.id === clientId);
-          setInteractions(clientInteractions);
+          setInteractions(clientInteractions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         } else {
           setError("Client not found.");
         }
@@ -101,6 +107,42 @@ export default function ClientDetailsPage() {
       }, 500);
     }
   }, [clientId]);
+
+  const handleInteractionAdded = (newInteraction: Interaction) => {
+    setInteractions(prevInteractions => 
+      [newInteraction, ...prevInteractions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    );
+    // Potentially re-fetch client if lastInteraction date needs update from server
+    // For mock: if (client) setClient({...client, lastInteraction: newInteraction.date});
+  };
+
+  const handleArchiveClient = async () => {
+    if (!client) return;
+    setIsArchiving(true);
+    // Simulate API call
+    try {
+      console.log(`Archiving client ${client.id}...`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+      
+      // Update local client state (mock behavior)
+      setClient(prevClient => prevClient ? { ...prevClient, status: 'Inactive' } : null);
+      
+      toast({
+        title: "Client Archived",
+        description: `${client.clientName} has been successfully archived and set to Inactive.`,
+      });
+      setIsArchiveConfirmOpen(false);
+    } catch (error) {
+      console.error("Failed to archive client:", error);
+      toast({
+        title: "Error Archiving Client",
+        description: (error as Error).message || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsArchiving(false);
+    }
+  };
 
   if (loading) {
     return <AppLayout><div className="flex justify-center items-center h-full"><p>Loading client details...</p></div></AppLayout>;
@@ -143,8 +185,12 @@ export default function ClientDetailsPage() {
           </div>
           <div className="flex space-x-2 mt-2 sm:mt-0">
             <Button variant="outline"><Edit3 className="mr-2 h-4 w-4" /> Edit Client</Button>
-            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Interaction</Button>
-            <Button variant="destructive"><Archive className="mr-2 h-4 w-4" /> Archive</Button>
+            <Button onClick={() => setIsAddInteractionModalOpen(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Interaction
+            </Button>
+            <Button variant="destructive" onClick={() => setIsArchiveConfirmOpen(true)} disabled={client?.status === 'Inactive'}>
+                <Archive className="mr-2 h-4 w-4" /> {client?.status === 'Inactive' ? 'Archived' : 'Archive'}
+            </Button>
           </div>
         </div>
 
@@ -217,6 +263,23 @@ export default function ClientDetailsPage() {
           </CardContent>
         </Card>
       </div>
+      <AddInteractionModal 
+        isOpen={isAddInteractionModalOpen}
+        onClose={() => setIsAddInteractionModalOpen(false)}
+        client={client}
+        onInteractionAdded={handleInteractionAdded}
+      />
+      <ConfirmationDialog
+        isOpen={isArchiveConfirmOpen}
+        onClose={() => setIsArchiveConfirmOpen(false)}
+        onConfirm={handleArchiveClient}
+        title="Archive Client?"
+        description={
+          <p>Are you sure you want to archive <strong>{client?.clientName}</strong>? This will set their status to Inactive. This action can usually be undone via client settings or by an admin.</p>
+        }
+        confirmButtonText="Yes, Archive Client"
+        isConfirming={isArchiving}
+      />
     </AppLayout>
   );
 } 
