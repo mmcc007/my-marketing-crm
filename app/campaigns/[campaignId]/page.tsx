@@ -10,6 +10,8 @@ import { Campaign, Client } from "@/types"; // Assuming User might be needed if 
 import { ArrowLeft, Edit3, Archive, Users, CalendarDays, DollarSign, ClipboardList, FileText } from 'lucide-react';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import EditCampaignModal from "@/components/campaigns/EditCampaignModal";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock Data - Ideally, centralize this
 const mockClients: Client[] = [
@@ -47,14 +49,16 @@ export default function CampaignDetailsPage() {
   const campaignId = params.campaignId as string;
 
   const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (campaignId) {
       setLoading(true);
       setError(null);
-      // Simulate API call to fetch campaign by ID
       setTimeout(() => {
         const foundCampaign = mockCampaigns.find(c => c.id === campaignId);
         if (foundCampaign) {
@@ -62,10 +66,15 @@ export default function CampaignDetailsPage() {
         } else {
           setError("Campaign not found.");
         }
+        setClients(mockClients);
         setLoading(false);
       }, 500);
     }
   }, [campaignId]);
+
+  const handleCampaignUpdated = (updatedCampaign: Campaign) => {
+    setCampaign(updatedCampaign);
+  };
 
   if (loading) {
     return <AppLayout><div className="flex justify-center items-center h-full"><p>Loading campaign details...</p></div></AppLayout>;
@@ -116,7 +125,7 @@ export default function CampaignDetailsPage() {
             <p className="text-muted-foreground">Client: {campaign.client.clientName}</p>
           </div>
           <div className="flex space-x-2 mt-2 sm:mt-0">
-            <Button variant="outline" onClick={() => alert('Edit Campaign modal to be implemented')}><Edit3 className="mr-2 h-4 w-4" /> Edit Campaign</Button>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(true)}><Edit3 className="mr-2 h-4 w-4" /> Edit Campaign</Button>
             <Button variant="destructive" onClick={() => alert('Archive Campaign confirmation to be implemented')}><Archive className="mr-2 h-4 w-4" /> Archive</Button>
           </div>
         </div>
@@ -150,6 +159,13 @@ export default function CampaignDetailsPage() {
         </Card>
         */}
       </div>
+      <EditCampaignModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        campaign={campaign}
+        clients={clients}
+        onCampaignUpdated={handleCampaignUpdated}
+      />
     </AppLayout>
   );
 } 
