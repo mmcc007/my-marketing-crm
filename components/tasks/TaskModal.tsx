@@ -67,10 +67,10 @@ export default function TaskModal({
     title: "",
     description: "",
     dueDate: undefined,
-    assignedToId: "",
-    priority: "",
-    relatedClientId: defaultClientId || "",
-    relatedCampaignId: defaultCampaignId || "",
+    assignedToId: "unassigned",
+    priority: "medium",
+    relatedClientId: defaultClientId || "none",
+    relatedCampaignId: defaultCampaignId || "none",
   });
   
   const [errors, setErrors] = useState<Partial<Record<keyof TaskFormData, string>>>({});
@@ -84,10 +84,10 @@ export default function TaskModal({
           title: task.title || "",
           description: task.description || "",
           dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-          assignedToId: task.assignedTo?.id || "",
+          assignedToId: task.assignedTo?.id || "unassigned",
           priority: task.priority || "medium",
-          relatedClientId: task.relatedClient?.id || "",
-          relatedCampaignId: task.relatedCampaign?.id || "",
+          relatedClientId: task.relatedClient?.id || "none",
+          relatedCampaignId: task.relatedCampaign?.id || "none",
         });
       } else {
         // Add mode: reset form with default values
@@ -95,10 +95,10 @@ export default function TaskModal({
           title: "",
           description: "",
           dueDate: undefined,
-          assignedToId: "",
+          assignedToId: "unassigned",
           priority: "medium",
-          relatedClientId: defaultClientId || "",
-          relatedCampaignId: defaultCampaignId || "",
+          relatedClientId: defaultClientId || "none",
+          relatedCampaignId: defaultCampaignId || "none",
         });
       }
       setErrors({});
@@ -151,9 +151,14 @@ export default function TaskModal({
     
     try {
       // Find related objects
-      const assignedTo = users.find(user => user.id === formData.assignedToId) || null;
-      const relatedClient = clients.find(client => client.id === formData.relatedClientId) || null;
-      const relatedCampaign = campaigns.find(campaign => campaign.id === formData.relatedCampaignId) || null;
+      const assignedTo = formData.assignedToId === "unassigned" ? null : 
+        users.find(user => user.id === formData.assignedToId) || null;
+      
+      const relatedClient = formData.relatedClientId === "none" ? null : 
+        clients.find(client => client.id === formData.relatedClientId) || null;
+      
+      const relatedCampaign = formData.relatedCampaignId === "none" ? null : 
+        campaigns.find(campaign => campaign.id === formData.relatedCampaignId) || null;
       
       // Prepare the task object
       const taskData: Task = {
@@ -285,7 +290,7 @@ export default function TaskModal({
                 <SelectValue placeholder="Select a user" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Unassigned</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
                 {users.map(user => (
                   <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
                 ))}
@@ -305,7 +310,7 @@ export default function TaskModal({
                   <SelectValue placeholder="Select a client" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {clients.map(client => (
                     <SelectItem key={client.id} value={client.id}>{client.clientName}</SelectItem>
                   ))}
@@ -324,7 +329,7 @@ export default function TaskModal({
                   <SelectValue placeholder="Select a campaign" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
                   {campaigns.map(campaign => (
                     <SelectItem key={campaign.id} value={campaign.id}>{campaign.campaignName}</SelectItem>
                   ))}
